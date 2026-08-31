@@ -162,4 +162,210 @@ window.openDetail = function(id) {
   document.getElementById('detailTitle').textContent = it.name;
   document.getElementById('detailPrice').textContent = it.price || 'السعر غير محدد';
   document.getElementById('detailLoc').innerHTML = '📍 ' + window.escapeHtml(it.loc || 'غير محدد');
-  document.getElementById('detailCat').innerHTML = '🏷️ ' + window.escapeHtml(it.cat || 'أ
+  document.getElementById('detailCat').innerHTML = '🏷️ ' + window.escapeHtml(it.cat || 'أخرى');
+  document.getElementById('detailDesc').textContent = it.desc || 'لا يوجد وصف إضافي.';
+  
+  const waText = encodeURIComponent('مرحباً، رأيت إعلانك عن "' + it.name + '" في تطبيق سوقنا وأرغب في الاستفسار عنه.');
+  const phone = it.phone || '';
+  document.getElementById('contactBtn').onclick = function() {
+    if(!phone) { alert('عذراً، لم يتم إرفاق رقم هاتف لهذا الإعلان.'); return; }
+    window.open('https://wa.me/' + phone + '?text=' + waText, '_blank');
+  };
+
+  const favBtn = document.getElementById('detailFavBtn');
+  favBtn.classList.toggle('active', window.favorites.has(id));
+  const svg = favBtn.querySelector('svg');
+  svg.setAttribute('fill', window.favorites.has(id) ? 'currentColor' : 'none');
+
+  const user = window.currentUser ? window.currentUser() : null;
+  const deleteBtn = document.getElementById('detailDeleteBtn');
+  if(user && it.ownerId === user.uid) {
+    deleteBtn.style.display = 'flex';
+  } else {
+    deleteBtn.style.display = 'none';
+  }
+
+  window.showPage('detail');
+};
+
+window.toggleFavoriteCurrent = function() {
+  if(window.currentDetailId == null) return;
+  window.toggleFavorite(window.currentDetailId, document.getElementById('detailFavBtn'));
+};
+
+window.deleteCurrentItem = async function() {
+  if(!window.currentDetailId) return;
+  if(!confirm('هل أنت متأكد من حذف هذا الإعلان؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+  
+  const it = window.items.find(x => x.id === window.currentDetailId);
+  if(!it) return;
+
+  try {
+    if(it.imageUrl) {
+      try {
+        const imgRef = window.ref(window.storage, it.imageUrl);
+        await window.deleteObject(imgRef);
+      } catch(e) { console.log('Failed to delete image from storage', e); }
+    }
+    await window.deleteDoc(window.doc(window.db, 'items', window.currentDetailId));
+    alert('تم حذف الإعلان بنجاح.');
+    window.showPage('home');
+  } catch(e) {
+    console.error(e);
+    alert('حدث خطأ أثناء الحذف: ' + e.message);
+  }
+};
+
+// === Form & Submission ===
+document.getElementById('imageInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  if(file.size > 5 * 1024 * 1024) {
+    alert('حجم الصورة كبير جداً. الحد الأقصى 5 ميجابايت.');
+    this.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    window.pendingImage = { file: file, dataUrl: ev.target.result };
+    const box = document.getElementById('uploadBox');
+    box.classList.add('has-image');
+    box.innerHTML = '<img src="' + ev.target.result + '" alt="معاينة السلعة">';
+  };
+  reader.readAsDataURL(file);
+});
+
+window.normalizePhone = function(raw) {
+  let digits = raw.replace(/[^0-9]/g, '');
+  if(digits.indexOf('0') === 0) {
+    digits = '213' + digits.substring(1);
+  } else if(digits.indexOf('213') !== 0) {
+    digits = '213' + digits;
+  }
+  return digits;
+};
+
+window.isValidAlgerianPhone = function(raw) {
+  let digits = raw.replace(/[^0-9]/g, '');
+  let local = digits;
+  if(digits.indexOf('213') === 0) {
+    local = '0' + digits.substring(3);
+  }
+  return /^0(5|6|7)[0-9]{8}$/.test(local);
+};
+
+window.resetUploadBox = function() {
+  window.pendingImage = null;
+  document.getElementById('imageInput').value = '';
+  const box = document.getElementById('uploadBox');
+  box.classList.remove('has-image');
+  box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg><span style="font-size:14px;font-weight:600;">اضغط لإضافة صورة السلعة</span>';
+};
+
+window.submitItem = async function() {
+  const user = window.currentUser ? window.currentUser() : null;
+  if (!user || !user.email) { 
+    alert('يجب تسجيل الدخول بحساب حقيقي أولاً.'); 
+    window.openAuthModal();
+    return; 
+  }
+
+  const name = document.getElementById('itemName').value.trim();
+  const price = document.getElementById('itemPrice').value.trim();
+  const loc = document.getElementById('itemLoc').value.trim();
+  const cat = document.getElementById('itemCat').value;
+  const phoneRaw = document.getElementById('itemPhone').value.trim();
+  
+  const errEl = document.getElementById('nameErr');
+  const priceErrEl = document.getElementById('priceErr');
+  const phoneErrEl = document.getElementById('phoneErr');
+  const submitBtn = document.getElementById('submitBtn');
+
+  let hasError = false;
+  if(!name) { errEl.style.display = 'block'; hasError = true; } else { errEl.style.display = 'none'; }
+  
+  const priceValid = price === '' || /^[0-9]+$/.test(price);
+  if(!priceValid) { priceErrEl.style.display = 'block'; hasError = true; } else { priceErrEl.style.display = 'none'; }
+
+  if(!window.isValidAlgerianPhone(phoneRaw)) { phoneErrEl.style.display = 'block'; hasError = true; } else { phoneErrEl.style.display = 'none'; }
+
+  if(!loc) { 
+    document.getElementById('itemLoc').style.borderColor = 'var(--rust)';
+    hasError = true; 
+  } else {
+    document.getElementById('itemLoc').style.borderColor = 'var(--line)';
+  }
+
+  if(hasError) return;
+
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="loading-spinner"></span> جاري النشر...';
+
+  try {
+    let imageUrl = null;
+    if(window.pendingImage && window.pendingImage.file) {
+      const file = window.pendingImage.file;
+      const ext = file.name.split('.').pop().toLowerCase();
+      const safeName = 'items/' + Date.now() + '_' + Math.random().toString(36).substring(2) + '.' + ext;
+      const imgRef = window.ref(window.storage, safeName);
+      await window.uploadBytes(imgRef, file);
+      imageUrl = await window.getDownloadURL(imgRef);
+    }
+
+    const desc = document.getElementById('itemDesc').value.trim();
+    const priceNum = parseInt(price, 10);
+    
+    await window.addDoc(window.itemsCol, {
+      name: name,
+      priceNum: isNaN(priceNum) ? 0 : priceNum,
+      price: price ? (price + ' دج') : 'السعر غير محدد',
+      loc: loc,
+      cat: cat,
+      desc: desc || 'لا يوجد وصف إضافي.',
+      phone: window.normalizePhone(phoneRaw),
+      imageUrl: imageUrl,
+      ownerId: user.uid,
+      ownerEmail: user.email,
+      createdAt: window.serverTimestamp()
+    });
+
+    document.getElementById('itemName').value = '';
+    document.getElementById('itemPrice').value = '';
+    document.getElementById('itemLoc').value = '';
+    document.getElementById('itemPhone').value = '';
+    document.getElementById('itemDesc').value = '';
+    window.resetUploadBox();
+
+    document.getElementById('successMsg').style.display = 'block';
+    setTimeout(function() {
+      document.getElementById('successMsg').style.display = 'none';
+      window.showPage('home');
+    }, 2000);
+  } catch (e) {
+    console.error(e);
+    alert('حدث خطأ أثناء النشر: ' + e.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = 'نشر الإعلان الآن';
+  }
+};
+
+// Input Listeners for Error Clearing
+document.getElementById('itemName').addEventListener('input', function() { document.getElementById('nameErr').style.display = 'none'; });
+document.getElementById('itemPrice').addEventListener('input', function() { document.getElementById('priceErr').style.display = 'none'; });
+document.getElementById('itemPhone').addEventListener('input', function() { document.getElementById('phoneErr').style.display = 'none'; });
+document.getElementById('itemLoc').addEventListener('input', function() { this.style.borderColor = 'var(--line)'; });
+
+// Firestore Listener
+const q = query(window.itemsCol, orderBy('createdAt', 'desc'));
+onSnapshot(q, (snapshot) => {
+  window.items = [];
+  snapshot.forEach((docSnap) => {
+    const data = docSnap.data();
+    window.items.push({ id: docSnap.id, ...data });
+  });
+  window.renderGrid();
+});
+
+// Initial Render
+window.renderChips();
