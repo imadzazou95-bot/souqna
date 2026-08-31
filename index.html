@@ -154,11 +154,54 @@
 <!-- Auth Modal (Mandatory) -->
 <div class="modal-overlay open" id="authModal">
   <div class="modal-box">
-    <h3>تسجيل الدخول مطلوب</h3>
-    <p>لضمان أمان السوق، يجب تسجيل الدخول ببريد إلكتروني حقيقي لإضافة أو إدارة الإعلانات.</p>
-    <input type="email" id="authEmail" placeholder="your@email.com">
-    <button class="modal-btn primary" id="sendLinkBtn" onclick="sendEmailLink()">أرسل رابط الدخول السحري</button>
-    <div class="modal-msg" id="authMsg"></div>
+    <h3>مرحباً بك في سوقنا</h3>
+    <p>سجّل دخولك بطريقتك المفضلة لإضافة وإدارة إعلاناتك</p>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabPhone" onclick="switchAuthTab('phone')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        رقم الهاتف
+      </button>
+      <button class="auth-tab" id="tabEmail" onclick="switchAuthTab('email')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+        البريد الإلكتروني
+      </button>
+    </div>
+
+    <!-- Phone Auth Screen -->
+    <div id="phoneAuthScreen">
+      <div class="phone-input-wrap">
+        <select id="phoneCountryCode" class="country-code">
+          <option value="+213">🇩🇿 +213</option>
+        </select>
+        <input type="tel" id="authPhone" placeholder="555 12 34 56" dir="ltr" style="text-align:right;">
+      </div>
+      <button class="modal-btn primary" id="sendCodeBtn" onclick="sendPhoneCode()">إرسال رمز التحقق</button>
+      <div class="modal-msg" id="phoneAuthMsg"></div>
+    </div>
+
+    <!-- OTP Screen (Hidden by default) -->
+    <div id="otpScreen" style="display:none;">
+      <div class="otp-info">
+        <p id="otpInfoText">أدخل الرمز المكون من 6 أرقام الذي تم إرساله إلى:</p>
+        <strong id="otpPhoneDisplay"></strong>
+      </div>
+      <input type="text" id="otpInput" placeholder="------" maxlength="6" dir="ltr" class="otp-input" inputmode="numeric" autocomplete="one-time-code">
+      <button class="modal-btn primary" id="verifyOtpBtn" onclick="verifyPhoneCode()">تأكيد الرمز والدخول</button>
+      <button class="modal-btn secondary" onclick="backToPhoneEntry()">تغيير الرقم</button>
+      <div class="modal-msg" id="otpAuthMsg"></div>
+    </div>
+
+    <!-- Email Auth Screen (Hidden by default) -->
+    <div id="emailAuthScreen" style="display:none;">
+      <input type="email" id="authEmail" placeholder="your@email.com">
+      <button class="modal-btn primary" id="sendLinkBtn" onclick="sendEmailLink()">أرسل رابط الدخول السحري</button>
+      <div class="modal-msg" id="emailAuthMsg"></div>
+    </div>
+
+    <!-- reCAPTCHA container (required by Firebase) -->
+    <div id="recaptcha-container"></div>
   </div>
 </div>
 
