@@ -15,15 +15,16 @@ window.openAuthModal = function() {
 };
 window.closeAuthModal = function() { 
   document.getElementById('authModal').classList.remove('open'); 
-  document.getElementById('authMsg').textContent = '';
-  // ملاحظة: body.style.overflow يتم إدارته بواسطة firebase.js بناءً على حالة المستخدم
+  document.getElementById('phoneAuthMsg').textContent = '';
+  document.getElementById('emailAuthMsg').textContent = '';
+  document.getElementById('otpAuthMsg').textContent = '';
 };
 
 // === Navigation ===
 window.checkAuthAndShowPost = function() {
   const user = window.currentUser ? window.currentUser() : null;
-  if (!user || !user.email) {
-    alert('يجب تسجيل الدخول بحساب حقيقي أولاً لإضافة إعلان.');
+  if (!user) {
+    alert('يجب تسجيل الدخول أولاً لإضافة إعلان.');
     window.openAuthModal();
     return;
   }
@@ -66,8 +67,8 @@ window.toggleFavView = function() {
 };
 
 window.toggleFavorite = function(id, btnEl) {
-  if(window.favorites.has(id)) { window.favorites.delete(id); }
-  else { window.favorites.add(id); }
+  if(window.favorites.has(id)) window.favorites.delete(id);
+  else window.favorites.add(id);
   localStorage.setItem('souqna_favs', JSON.stringify([...window.favorites]));
   if(btnEl) {
     btnEl.classList.toggle('active', window.favorites.has(id));
@@ -237,20 +238,15 @@ document.getElementById('imageInput').addEventListener('change', function(e) {
 
 window.normalizePhone = function(raw) {
   let digits = raw.replace(/[^0-9]/g, '');
-  if(digits.indexOf('0') === 0) {
-    digits = '213' + digits.substring(1);
-  } else if(digits.indexOf('213') !== 0) {
-    digits = '213' + digits;
-  }
+  if(digits.indexOf('0') === 0) digits = '213' + digits.substring(1);
+  else if(digits.indexOf('213') !== 0) digits = '213' + digits;
   return digits;
 };
 
 window.isValidAlgerianPhone = function(raw) {
   let digits = raw.replace(/[^0-9]/g, '');
   let local = digits;
-  if(digits.indexOf('213') === 0) {
-    local = '0' + digits.substring(3);
-  }
+  if(digits.indexOf('213') === 0) local = '0' + digits.substring(3);
   return /^0(5|6|7)[0-9]{8}$/.test(local);
 };
 
@@ -264,8 +260,8 @@ window.resetUploadBox = function() {
 
 window.submitItem = async function() {
   const user = window.currentUser ? window.currentUser() : null;
-  if (!user || !user.email) { 
-    alert('يجب تسجيل الدخول بحساب حقيقي أولاً.'); 
+  if (!user) { 
+    alert('يجب تسجيل الدخول أولاً.'); 
     window.openAuthModal();
     return; 
   }
@@ -325,7 +321,8 @@ window.submitItem = async function() {
       phone: window.normalizePhone(phoneRaw),
       imageUrl: imageUrl,
       ownerId: user.uid,
-      ownerEmail: user.email,
+      ownerEmail: user.email || null,
+      ownerPhone: user.phoneNumber || null,
       createdAt: window.serverTimestamp()
     });
 
@@ -350,11 +347,16 @@ window.submitItem = async function() {
   }
 };
 
-// Input Listeners for Error Clearing
+// Input Listeners
 document.getElementById('itemName').addEventListener('input', function() { document.getElementById('nameErr').style.display = 'none'; });
 document.getElementById('itemPrice').addEventListener('input', function() { document.getElementById('priceErr').style.display = 'none'; });
 document.getElementById('itemPhone').addEventListener('input', function() { document.getElementById('phoneErr').style.display = 'none'; });
 document.getElementById('itemLoc').addEventListener('input', function() { this.style.borderColor = 'var(--line)'; });
+
+// OTP Input - Allow only numbers
+document.getElementById('otpInput').addEventListener('input', function(e) {
+  this.value = this.value.replace(/[^0-9]/g, '');
+});
 
 // Firestore Listener
 const q = query(window.itemsCol, orderBy('createdAt', 'desc'));
