@@ -2,8 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
 import { 
   getAuth, onAuthStateChanged, 
-  sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut,
-  signInWithPhoneNumber, RecaptchaVerifier
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, query, orderBy, onSnapshot, serverTimestamp, doc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
@@ -24,66 +23,19 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// إعدادات رابط الإيميل - مهم جداً!
-const actionCodeSettings = {
-  // يجب أن يكون URL كامل ومحدد
-  url: window.location.origin + window.location.pathname,
-  handleCodeInApp: true
-};
-
 let currentUser = null;
-let confirmationResult = null;
-let recaptchaVerifier = null;
 
-// === معالجة حالة المستخدم ===
-onAuthStateChanged(auth, async (user) => {
-  console.log('Auth state changed:', user ? user.uid : 'null');
+// === Mandatory Auth Check ===
+onAuthStateChanged(auth, (user) => {
   currentUser = user;
   updateAuthUI(user);
   
   if (!user) {
-    // التحقق من وجود رابط إيميل في URL
-    if (isSignInWithEmailLink(auth, window.location.href)) {
-      console.log('Email link detected in URL');
-      let email = window.localStorage.getItem('emailForSignIn');
-      
-      if (!email) {
-        email = window.prompt('يرجى إدخال البريد الإلكتروني الذي أرسلت إليه الرابط:');
-      }
-      
-      if (email) {
-        try {
-          console.log('Signing in with email link...');
-          await signInWithEmailLink(auth, email, window.location.href);
-          window.localStorage.removeItem('emailForSignIn');
-          
-          // إزالة معاملات الرابط من URL
-          window.history.replaceState({}, document.title, window.location.pathname);
-          console.log('Email sign-in successful');
-        } catch (err) {
-          console.error('Email link sign-in error:', err);
-          alert('خطأ في تسجيل الدخول عبر الرابط: ' + err.message);
-          // فتح نافذة الدخول يدوياً
-          if (typeof window.openAuthModal === 'function') window.openAuthModal();
-        }
-      } else {
-        // المستخدم ألغى الإدخال
-        if (typeof window.openAuthModal === 'function') window.openAuthModal();
-      }
-    } else {
-      // لا يوجد مستخدم ولا رابط إيميل
-      if (typeof window.openAuthModal === 'function') window.openAuthModal();
-      document.body.style.overflow = 'hidden';
-    }
+    if (typeof window.openAuthModal === 'function') window.openAuthModal();
+    document.body.style.overflow = 'hidden';
   } else {
-    // المستخدم مسجل دخوله
     document.body.style.overflow = '';
     if (typeof window.closeAuthModal === 'function') window.closeAuthModal();
-    
-    // إذا كان هناك رابط إيميل في URL، قم بإزالته
-    if (isSignInWithEmailLink(auth, window.location.href)) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
   }
 });
 
@@ -99,161 +51,19 @@ function updateAuthUI(user) {
     return;
   }
   
-  const displayValue = user.email || user.phoneNumber || 'حساب مسجل';
-  statusEl.textContent = displayValue;
+  statusEl.textContent = user.email;
   btnEl.style.display = 'inline-block';
   btnEl.textContent = 'تسجيل الخروج';
   btnEl.onclick = () => { signOut(auth); };
 }
 
-// === Phone Auth Functions ===
+// === Email + Password Auth ===
 
-window.initRecaptcha = function() {
-  if (recaptchaVerifier) {
-    try { recaptchaVerifier.clear(); } catch(e) { console.log('reCAPTCHA clear error:', e); }
-  }
-  
-  try {
-    recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      'size': 'invisible',
-      'callback': () => { console.log('reCAPTCHA solved'); },
-      'expired-callback': () => {
-        const msg = document.getElementById('phoneAuthMsg');
-        msg.className = 'modal-msg err';
-        msg.textContent = 'انتهت صلاحية التحقق، حاول مرة أخرى.';
-      }
-    });
-    console.log('reCAPTCHA initialized');
-  } catch (err) {
-    console.error('reCAPTCHA init error:', err);
-  }
-};
-
-window.sendPhoneCode = async function() {
-  const countryCode = document.getElementById('phoneCountryCode').value;
-  const phoneDigits = document.getElementById('authPhone').value.trim().replace(/\s+/g, '');
-  const msgEl = document.getElementById('phoneAuthMsg');
-  const btn = document.getElementById('sendCodeBtn');
-  
-  console.log('Sending code to:', phoneDigits);
-  
-  if (!phoneDigits || !/^[0-9]{9,10}$/.test(phoneDigits)) {
-    msgEl.className = 'modal-msg err';
-    msgEl.textContent = 'يرجى إدخال رقم هاتف صحيح (9-10 أرقام).';
-    return;
-  }
-  
-  let fullPhone = phoneDigits;
-  if (phoneDigits.startsWith('0')) {
-    fullPhone = '+213' + phoneDigits.substring(1);
-  } else if (!phoneDigits.startsWith('+')) {
-    fullPhone = countryCode + phoneDigits;
-  }
-  
-  console.log('Full phone:', fullPhone);
-  
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loading-spinner"></span> جاري الإرسال...';
-  msgEl.textContent = '';
-  
-  try {
-    if (!recaptchaVerifier) {
-      window.initRecaptcha();
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
-    confirmationResult = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifier);
-    
-    document.getElementById('phoneAuthScreen').style.display = 'none';
-    document.getElementById('otpScreen').style.display = 'block';
-    document.getElementById('otpPhoneDisplay').textContent = fullPhone;
-    document.getElementById('otpInput').focus();
-    
-    msgEl.className = 'modal-msg ok';
-    msgEl.textContent = '✓ تم إرسال الرمز بنجاح!';
-    console.log('Code sent successfully');
-  } catch (err) {
-    console.error('Send code error:', err);
-    msgEl.className = 'modal-msg err';
-    
-    if (err.code === 'auth/too-many-requests') {
-      msgEl.textContent = 'تم تجاوز الحد المسموح. حاول لاحقاً.';
-    } else if (err.code === 'auth/invalid-phone-number') {
-      msgEl.textContent = 'رقم الهاتف غير صالح.';
-    } else if (err.code === 'auth/missing-app-credentials') {
-      msgEl.textContent = 'خطأ في التحقق. تأكد من إعدادات Firebase.';
-    } else if (err.code === 'auth/quota-exceeded') {
-      msgEl.textContent = 'تم تجاوز الحصة المجانية.';
-    } else if (err.code === 'auth/admin-restricted-operation') {
-      msgEl.textContent = 'هذه العملية مقيدة. فعّل Phone Auth في Firebase.';
-    } else {
-      msgEl.textContent = 'خطأ: ' + err.message;
-    }
-    
-    window.initRecaptcha();
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'إرسال رمز التحقق';
-  }
-};
-
-window.verifyPhoneCode = async function() {
-  const code = document.getElementById('otpInput').value.trim();
-  const msgEl = document.getElementById('otpAuthMsg');
-  const btn = document.getElementById('verifyOtpBtn');
-  
-  if (!code || code.length !== 6 || !/^[0-9]{6}$/.test(code)) {
-    msgEl.className = 'modal-msg err';
-    msgEl.textContent = 'يرجى إدخال الرمز المكون من 6 أرقام.';
-    return;
-  }
-  
-  if (!confirmationResult) {
-    msgEl.className = 'modal-msg err';
-    msgEl.textContent = 'انتهت الجلسة، يرجى إعادة إرسال الرمز.';
-    return;
-  }
-  
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loading-spinner"></span> جاري التحقق...';
-  
-  try {
-    await confirmationResult.confirm(code);
-    msgEl.className = 'modal-msg ok';
-    msgEl.textContent = '✓ تم الدخول بنجاح!';
-    confirmationResult = null;
-    console.log('Phone verified successfully');
-  } catch (err) {
-    console.error('Verify code error:', err);
-    msgEl.className = 'modal-msg err';
-    if (err.code === 'auth/invalid-verification-code') {
-      msgEl.textContent = 'الرمز غير صحيح.';
-    } else {
-      msgEl.textContent = 'خطأ: ' + err.message;
-    }
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'تأكيد الرمز والدخول';
-  }
-};
-
-window.backToPhoneEntry = function() {
-  document.getElementById('otpScreen').style.display = 'none';
-  document.getElementById('phoneAuthScreen').style.display = 'block';
-  document.getElementById('otpInput').value = '';
-  document.getElementById('otpAuthMsg').textContent = '';
-  document.getElementById('phoneAuthMsg').textContent = '';
-  confirmationResult = null;
-};
-
-// === Email Auth Function ===
-window.sendEmailLink = async function() {
+window.registerUser = async function() {
   const email = document.getElementById('authEmail').value.trim();
-  const msgEl = document.getElementById('emailAuthMsg');
-  const btn = document.getElementById('sendLinkBtn');
-  
-  console.log('Sending email link to:', email);
-  console.log('Action code settings:', actionCodeSettings);
+  const password = document.getElementById('authPassword').value;
+  const msgEl = document.getElementById('authMsg');
+  const btn = document.getElementById('authSubmitBtn');
   
   if (!email || !email.includes('@')) {
     msgEl.className = 'modal-msg err';
@@ -261,55 +71,103 @@ window.sendEmailLink = async function() {
     return;
   }
   
+  if (!password || password.length < 6) {
+    msgEl.className = 'modal-msg err';
+    msgEl.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.';
+    return;
+  }
+  
   btn.disabled = true;
-  btn.textContent = 'جاري الإرسال...';
+  btn.innerHTML = '<span class="loading-spinner"></span> جاري التسجيل...';
   
   try {
-    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-    window.localStorage.setItem('emailForSignIn', email);
-    
+    await createUserWithEmailAndPassword(auth, email, password);
     msgEl.className = 'modal-msg ok';
-    msgEl.textContent = '✓ تم الإرسال! افتح بريدك واضغط على الرابط للدخول.';
-    console.log('Email link sent successfully');
+    msgEl.textContent = '✓ تم التسجيل بنجاح!';
+    console.log('User registered:', email);
   } catch (err) {
-    console.error('Email link error:', err);
+    console.error('Register error:', err);
     msgEl.className = 'modal-msg err';
     
-    if (err.code === 'auth/invalid-email') {
+    if (err.code === 'auth/email-already-in-use') {
+      msgEl.textContent = 'هذا البريد مسجل مسبقاً. استخدم تسجيل الدخول.';
+    } else if (err.code === 'auth/invalid-email') {
       msgEl.textContent = 'البريد الإلكتروني غير صالح.';
-    } else if (err.code === 'auth/unauthorized-continue-uri') {
-      msgEl.textContent = 'الدومين غير مصرح به. أضفه في Firebase Console > Authentication > Settings > Authorized domains';
-    } else if (err.code === 'auth/missing-continue-uri') {
-      msgEl.textContent = 'خطأ في إعدادات الرابط. تأكد من actionCodeSettings.';
+    } else if (err.code === 'auth/weak-password') {
+      msgEl.textContent = 'كلمة المرور ضعيفة جداً.';
     } else {
       msgEl.textContent = 'خطأ: ' + err.message;
     }
   } finally {
     btn.disabled = false;
-    btn.textContent = 'أرسل رابط الدخول السحري';
+    btn.textContent = 'إنشاء حساب جديد';
+  }
+};
+
+window.loginUser = async function() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const msgEl = document.getElementById('authMsg');
+  const btn = document.getElementById('authSubmitBtn');
+  
+  if (!email || !email.includes('@')) {
+    msgEl.className = 'modal-msg err';
+    msgEl.textContent = 'يرجى إدخال بريد إلكتروني صحيح.';
+    return;
+  }
+  
+  if (!password) {
+    msgEl.className = 'modal-msg err';
+    msgEl.textContent = 'يرجى إدخال كلمة المرور.';
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span> جاري الدخول...';
+  
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    msgEl.className = 'modal-msg ok';
+    msgEl.textContent = '✓ تم الدخول بنجاح!';
+    console.log('User logged in:', email);
+  } catch (err) {
+    console.error('Login error:', err);
+    msgEl.className = 'modal-msg err';
+    
+    if (err.code === 'auth/user-not-found') {
+      msgEl.textContent = 'لا يوجد حساب بهذا البريد. سجّل حساباً جديداً.';
+    } else if (err.code === 'auth/wrong-password') {
+      msgEl.textContent = 'كلمة المرور غير صحيحة.';
+    } else if (err.code === 'auth/invalid-email') {
+      msgEl.textContent = 'البريد الإلكتروني غير صالح.';
+    } else {
+      msgEl.textContent = 'خطأ: ' + err.message;
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'تسجيل الدخول';
   }
 };
 
 // === Tab Switching ===
-window.switchAuthTab = function(tab) {
-  const phoneTab = document.getElementById('tabPhone');
-  const emailTab = document.getElementById('tabEmail');
-  const phoneScreen = document.getElementById('phoneAuthScreen');
-  const emailScreen = document.getElementById('emailAuthScreen');
-  const otpScreen = document.getElementById('otpScreen');
+window.switchAuthMode = function(mode) {
+  const loginTab = document.getElementById('tabLogin');
+  const registerTab = document.getElementById('tabRegister');
+  const submitBtn = document.getElementById('authSubmitBtn');
+  const msgEl = document.getElementById('authMsg');
   
-  if (tab === 'phone') {
-    phoneTab.classList.add('active');
-    emailTab.classList.remove('active');
-    phoneScreen.style.display = 'block';
-    emailScreen.style.display = 'none';
-    otpScreen.style.display = 'none';
+  msgEl.textContent = '';
+  
+  if (mode === 'login') {
+    loginTab.classList.add('active');
+    registerTab.classList.remove('active');
+    submitBtn.textContent = 'تسجيل الدخول';
+    submitBtn.onclick = window.loginUser;
   } else {
-    emailTab.classList.add('active');
-    phoneTab.classList.remove('active');
-    emailScreen.style.display = 'block';
-    phoneScreen.style.display = 'none';
-    otpScreen.style.display = 'none';
+    registerTab.classList.add('active');
+    loginTab.classList.remove('active');
+    submitBtn.textContent = 'إنشاء حساب جديد';
+    submitBtn.onclick = window.registerUser;
   }
 };
 
@@ -327,7 +185,3 @@ window.doc = doc;
 window.deleteDoc = deleteDoc;
 window.deleteObject = deleteObject;
 window.currentUser = () => currentUser;
-
-window.addEventListener('load', () => {
-  window.initRecaptcha();
-});
