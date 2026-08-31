@@ -5,9 +5,8 @@ import {
   sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut,
   signInWithPhoneNumber, RecaptchaVerifier
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, query, orderBy, onSnapshot, serverTimestamp, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, query, orderBy, onSnapshot, serverTimestamp, doc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import { addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBCFV1z7cQG_zDaJDQoO6_S59Nq0K2kxRo",
@@ -31,7 +30,7 @@ const actionCodeSettings = {
 };
 
 let currentUser = null;
-let confirmationResult = null; // لحفظ نتيجة إرسال رمز الهاتف
+let confirmationResult = null;
 let recaptchaVerifier = null;
 
 // === Mandatory Auth Check ===
@@ -46,7 +45,6 @@ onAuthStateChanged(auth, (user) => {
     document.body.style.overflow = '';
     if (typeof window.closeAuthModal === 'function') window.closeAuthModal();
     
-    // معالجة الدخول عبر رابط البريد
     if (isSignInWithEmailLink(auth, window.location.href)) {
       let email = window.localStorage.getItem('emailForSignIn');
       if (!email) {
@@ -58,7 +56,10 @@ onAuthStateChanged(auth, (user) => {
             window.localStorage.removeItem('emailForSignIn'); 
             window.history.replaceState({}, document.title, window.location.pathname);
           })
-          .catch((err) => { console.error(err); alert('خطأ في تأكيد البريد: ' + err.message); });
+          .catch((err) => { 
+            console.error('Email link error:', err);
+            alert('خطأ في تأكيد البريد: ' + err.message); 
+          });
       }
     }
   }
@@ -75,7 +76,6 @@ function updateAuthUI(user) {
     return;
   }
   
-  // عرض البريد أو رقم الهاتف
   const displayValue = user.email || user.phoneNumber || 'حساب مسجل';
   statusEl.textContent = displayValue;
   btnEl.style.display = 'inline-block';
@@ -85,37 +85,41 @@ function updateAuthUI(user) {
 
 // === Phone Auth Functions ===
 
-// تهيئة reCAPTCHA (مطلوب من Firebase)
 window.initRecaptcha = function() {
   if (recaptchaVerifier) {
-    try { recaptchaVerifier.clear(); } catch(e) {}
+    try { recaptchaVerifier.clear(); } catch(e) { console.log('reCAPTCHA clear error:', e); }
   }
-  recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-    'size': 'invisible',
-    'callback': () => {},
-    'expired-callback': () => {
-      const msg = document.getElementById('phoneAuthMsg');
-      msg.className = 'modal-msg err';
-      msg.textContent = 'انتهت صلاحية التحقق، حاول مرة أخرى.';
-    }
-  });
+  
+  try {
+    recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'invisible',
+      'callback': () => { console.log('reCAPTCHA solved'); },
+      'expired-callback': () => {
+        const msg = document.getElementById('phoneAuthMsg');
+        msg.className = 'modal-msg err';
+        msg.textContent = 'انتهت صلاحية التحقق، حاول مرة أخرى.';
+      }
+    });
+    console.log('reCAPTCHA initialized successfully');
+  } catch (err) {
+    console.error('reCAPTCHA initialization error:', err);
+  }
 };
 
-// إرسال رمز التحقق عبر SMS
 window.sendPhoneCode = async function() {
   const countryCode = document.getElementById('phoneCountryCode').value;
   const phoneDigits = document.getElementById('authPhone').value.trim().replace(/\s+/g, '');
   const msgEl = document.getElementById('phoneAuthMsg');
   const btn = document.getElementById('sendCodeBtn');
   
-  // التحقق من صحة الرقم
+  console.log('Sending code to:', phoneDigits);
+  
   if (!phoneDigits || !/^[0-9]{9,10}$/.test(phoneDigits)) {
     msgEl.className = 'modal-msg err';
     msgEl.textContent = 'يرجى إدخال رقم هاتف صحيح (9-10 أرقام).';
     return;
   }
   
-  // تحويل الرقم إلى الصيغة الدولية
   let fullPhone = phoneDigits;
   if (phoneDigits.startsWith('0')) {
     fullPhone = '+213' + phoneDigits.substring(1);
@@ -123,19 +127,20 @@ window.sendPhoneCode = async function() {
     fullPhone = countryCode + phoneDigits;
   }
   
+  console.log('Full phone number:', fullPhone);
+  
   btn.disabled = true;
   btn.innerHTML = '<span class="loading-spinner"></span> جاري الإرسال...';
   msgEl.textContent = '';
   
   try {
-    // تهيئة reCAPTCHA إذا لزم الأمر
     if (!recaptchaVerifier) {
       window.initRecaptcha();
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
     confirmationResult = await signInWithPhoneNumber(auth, fullPhone, recaptchaVerifier);
     
-    // عرض شاشة OTP
     document.getElementById('phoneAuthScreen').style.display = 'none';
     document.getElementById('otpScreen').style.display = 'block';
     document.getElementById('otpPhoneDisplay').textContent = fullPhone;
@@ -143,17 +148,25 @@ window.sendPhoneCode = async function() {
     
     msgEl.className = 'modal-msg ok';
     msgEl.textContent = '✓ تم إرسال الرمز بنجاح!';
+    console.log('Code sent successfully');
   } catch (err) {
-    console.error(err);
+    console.error('Send code error:', err);
     msgEl.className = 'modal-msg err';
+    
     if (err.code === 'auth/too-many-requests') {
       msgEl.textContent = 'تم تجاوز الحد المسموح. حاول لاحقاً.';
     } else if (err.code === 'auth/invalid-phone-number') {
       msgEl.textContent = 'رقم الهاتف غير صالح.';
+    } else if (err.code === 'auth/missing-app-credentials') {
+      msgEl.textContent = 'خطأ في التحقق. تأكد من إعدادات Firebase.';
+    } else if (err.code === 'auth/quota-exceeded') {
+      msgEl.textContent = 'تم تجاوز الحصة المجانية. تأكد من تفعيل خطة Blaze.';
+    } else if (err.code === 'auth/admin-restricted-operation') {
+      msgEl.textContent = 'هذه العملية مقيدة. تأكد من تفعيل Phone Auth في Firebase.';
     } else {
       msgEl.textContent = 'خطأ: ' + err.message;
     }
-    // إعادة تهيئة reCAPTCHA في حال الخطأ
+    
     window.initRecaptcha();
   } finally {
     btn.disabled = false;
@@ -161,7 +174,6 @@ window.sendPhoneCode = async function() {
   }
 };
 
-// التحقق من رمز OTP
 window.verifyPhoneCode = async function() {
   const code = document.getElementById('otpInput').value.trim();
   const msgEl = document.getElementById('otpAuthMsg');
@@ -187,8 +199,9 @@ window.verifyPhoneCode = async function() {
     msgEl.className = 'modal-msg ok';
     msgEl.textContent = '✓ تم الدخول بنجاح!';
     confirmationResult = null;
+    console.log('Phone verified successfully');
   } catch (err) {
-    console.error(err);
+    console.error('Verify code error:', err);
     msgEl.className = 'modal-msg err';
     if (err.code === 'auth/invalid-verification-code') {
       msgEl.textContent = 'الرمز الذي أدخلته غير صحيح.';
@@ -201,7 +214,6 @@ window.verifyPhoneCode = async function() {
   }
 };
 
-// العودة إلى شاشة إدخال الرقم
 window.backToPhoneEntry = function() {
   document.getElementById('otpScreen').style.display = 'none';
   document.getElementById('phoneAuthScreen').style.display = 'block';
@@ -217,6 +229,8 @@ window.sendEmailLink = async function() {
   const msgEl = document.getElementById('emailAuthMsg');
   const btn = document.getElementById('sendLinkBtn');
   
+  console.log('Sending email link to:', email);
+  
   if (!email || !email.includes('@')) {
     msgEl.className = 'modal-msg err';
     msgEl.textContent = 'يرجى إدخال بريد إلكتروني صحيح.';
@@ -225,14 +239,24 @@ window.sendEmailLink = async function() {
   
   btn.disabled = true;
   btn.textContent = 'جاري الإرسال...';
+  
   try {
     await sendSignInLinkToEmail(auth, email, actionCodeSettings);
     window.localStorage.setItem('emailForSignIn', email);
     msgEl.className = 'modal-msg ok';
     msgEl.textContent = '✓ تم الإرسال! افتح بريدك واضغط على الرابط.';
+    console.log('Email link sent successfully');
   } catch (err) {
+    console.error('Email link error:', err);
     msgEl.className = 'modal-msg err';
-    msgEl.textContent = 'خطأ: ' + err.message;
+    
+    if (err.code === 'auth/invalid-email') {
+      msgEl.textContent = 'البريد الإلكتروني غير صالح.';
+    } else if (err.code === 'auth/unauthorized-continue-uri') {
+      msgEl.textContent = 'الدومين غير مصرح به. أضفه في Firebase Console.';
+    } else {
+      msgEl.textContent = 'خطأ: ' + err.message;
+    }
   } finally {
     btn.disabled = false;
     btn.textContent = 'أرسل رابط الدخول السحري';
@@ -277,7 +301,6 @@ window.deleteDoc = deleteDoc;
 window.deleteObject = deleteObject;
 window.currentUser = () => currentUser;
 
-// تهيئة reCAPTCHA عند تحميل الصفحة
 window.addEventListener('load', () => {
   window.initRecaptcha();
 });
