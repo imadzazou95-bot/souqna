@@ -1,173 +1,173 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="لعبة من سيربح المليون - اختبر معلوماتك العامة واربح المليون">
-    <title>من سيربح المليون</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>سوقنا — سوق محلي للبيع والشراء</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Aref+Ruqaa:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <base target="_blank">
 </head>
 <body>
-    <!-- Particle Background -->
-    <div id="particles"></div>
 
-    <!-- Start Screen -->
-    <div id="start-screen" class="screen active">
-        <div class="logo-container">
-            <div class="logo-glow"></div>
-            <div class="diamond-icon">
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <polygon points="50,5 95,35 75,95 25,95 5,35" fill="url(#diamondGrad)" stroke="#ffd700" stroke-width="2"/>
-                    <polygon points="50,5 95,35 75,95 25,95 5,35" fill="url(#diamondShine)" opacity="0.5"/>
-                    <defs>
-                        <linearGradient id="diamondGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#1a237e"/>
-                            <stop offset="50%" style="stop-color:#283593"/>
-                            <stop offset="100%" style="stop-color:#0d47a1"/>
-                        </linearGradient>
-                        <linearGradient id="diamondShine" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#ffffff" stop-opacity="0.3"/>
-                            <stop offset="100%" style="stop-color:#ffffff" stop-opacity="0"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
-            </div>
-            <h1 class="game-title">من سيربح المليون؟</h1>
-            <p class="game-subtitle">اختبر معلوماتك العامة واربح الجائزة الكبرى</p>
-        </div>
-        <button id="start-btn" class="btn-primary pulse-btn" onclick="startGame()">
-            <span class="btn-text">ابدأ اللعب</span>
-            <span class="btn-shine"></span>
-        </button>
-        <div class="start-features">
-            <div class="feature">
-                <span class="feature-icon">🏆</span>
-                <span>١٥ سؤالاً</span>
-            </div>
-            <div class="feature">
-                <span class="feature-icon">💡</span>
-                <span>٣ وسائل مساعدة</span>
-            </div>
-            <div class="feature">
-                <span class="feature-icon">💰</span>
-                <span>مليون ريال</span>
-            </div>
-        </div>
+<header>
+  <span class="logo">سوقنا</span>
+  <nav>
+    <button class="nav-btn active" id="navHome" onclick="showPage('home')">الرئيسية</button>
+    <button class="nav-btn" id="navPost" onclick="checkAuthAndShowPost()">أضف سلعة</button>
+  </nav>
+</header>
+
+<div class="auth-bar" id="authBar">
+  <span id="authStatus">جاري التحقق...</span>
+  <button id="authBtn" onclick="openAuthModal()" style="display:none;">تسجيل الدخول</button>
+</div>
+
+<main id="pageHome">
+  <div class="hero">
+    <h1>سوق حيّك، بين يديك</h1>
+    <p>بيع واشترِ من أهل منطقتك مباشرة، بأمان وبدون تعقيد.</p>
+  </div>
+
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="ابحث عن سلعة (مثال: هاتف، طاولة...)" oninput="renderGrid()">
+    <button aria-label="بحث" onclick="renderGrid()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    </button>
+  </div>
+
+  <div class="chips" id="chips"></div>
+
+  <div class="controls-row">
+    <select class="sort-select" id="sortSelect" onchange="renderGrid()">
+      <option value="newest">الأحدث أولاً</option>
+      <option value="lowest">الأقل سعرًا</option>
+      <option value="highest">الأعلى سعرًا</option>
+    </select>
+    <button class="fav-toggle" id="favToggle" onclick="toggleFavView()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.35-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.6.7 4.5 2.2C10.9 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.65 12 21 12 21z"></path></svg>
+      المفضلة فقط
+    </button>
+  </div>
+
+  <div id="grid">
+    <div class="grid-loader">
+      <div class="loading-spinner"></div>
+      <div>جاري تحميل السلع...</div>
     </div>
+  </div>
+</main>
 
-    <!-- Game Screen -->
-    <div id="game-screen" class="screen">
-        <div class="game-layout">
-            <!-- Prize Ladder (Left Side) -->
-            <div class="prize-ladder" id="prize-ladder">
-                <div class="ladder-header">سلم الجوائز</div>
-                <div class="ladder-items" id="ladder-items"></div>
-            </div>
-
-            <!-- Main Game Area -->
-            <div class="game-main">
-                <!-- Top Bar -->
-                <div class="top-bar">
-                    <div class="current-prize" id="current-prize">
-                        <span class="prize-label">الجائزة الحالية</span>
-                        <span class="prize-value" id="prize-value">٠ ريال</span>
-                    </div>
-                    <div class="lifelines" id="lifelines">
-                        <button class="lifeline-btn" id="lifeline-5050" onclick="useLifeline('5050')" title="حذف إجابتين">
-                            <span class="lifeline-icon">50:50</span>
-                        </button>
-                        <button class="lifeline-btn" id="lifeline-audience" onclick="useLifeline('audience')" title="رأي الجمهور">
-                            <span class="lifeline-icon">👥</span>
-                        </button>
-                        <button class="lifeline-btn" id="lifeline-phone" onclick="useLifeline('phone')" title="اتصل بصديق">
-                            <span class="lifeline-icon">📞</span>
-                        </button>
-                    </div>
-                    <div class="question-counter">
-                        <span id="question-number">السؤال ١</span>
-                        <span>من ١٥</span>
-                    </div>
-                </div>
-
-                <!-- Timer -->
-                <div class="timer-container">
-                    <div class="timer-bar">
-                        <div class="timer-fill" id="timer-fill"></div>
-                    </div>
-                    <span class="timer-text" id="timer-text">٣٠</span>
-                </div>
-
-                <!-- Question Area -->
-                <div class="question-container" id="question-container">
-                    <div class="question-diamond"></div>
-                    <p class="question-text" id="question-text"></p>
-                </div>
-
-                <!-- Answers -->
-                <div class="answers-grid" id="answers-grid">
-                    <button class="answer-btn" id="answer-0" onclick="selectAnswer(0)">
-                        <span class="answer-letter">أ</span>
-                        <span class="answer-text" id="answer-text-0"></span>
-                    </button>
-                    <button class="answer-btn" id="answer-1" onclick="selectAnswer(1)">
-                        <span class="answer-letter">ب</span>
-                        <span class="answer-text" id="answer-text-1"></span>
-                    </button>
-                    <button class="answer-btn" id="answer-2" onclick="selectAnswer(2)">
-                        <span class="answer-letter">ج</span>
-                        <span class="answer-text" id="answer-text-2"></span>
-                    </button>
-                    <button class="answer-btn" id="answer-3" onclick="selectAnswer(3)">
-                        <span class="answer-letter">د</span>
-                        <span class="answer-text" id="answer-text-3"></span>
-                    </button>
-                </div>
-
-                <!-- Confirm / Walk Away -->
-                <div class="action-bar" id="action-bar" style="display:none;">
-                    <button class="btn-confirm" id="btn-confirm" onclick="confirmAnswer()">تأكيد الإجابة</button>
-                    <button class="btn-walkaway" onclick="walkAway()">الانسحاب</button>
-                </div>
-            </div>
+<main id="pageDetail" class="hidden">
+  <div class="detail-wrap">
+    <button class="back-btn" onclick="showPage('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      رجوع للسلع
+    </button>
+    <div class="detail-card">
+      <div class="detail-img" id="detailImg">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="8.5" cy="10.5" r="1.5"></circle><path d="M21 15l-5-5-9 9"></path></svg>
+      </div>
+      <div class="detail-body">
+        <div class="detail-title" id="detailTitle"></div>
+        <div class="detail-price" id="detailPrice"></div>
+        <div class="detail-meta">
+          <span id="detailLoc">📍 غير محدد</span>
+          <span id="detailCat">🏷️ أخرى</span>
         </div>
-    </div>
-
-    <!-- Audience Poll Modal -->
-    <div id="audience-modal" class="modal">
-        <div class="modal-content">
-            <h2>📊 تصويت الجمهور</h2>
-            <div class="poll-chart" id="poll-chart"></div>
-            <button class="btn-primary" onclick="closeModal('audience-modal')">حسناً</button>
+        <div class="detail-desc" id="detailDesc"></div>
+        <div class="detail-actions">
+          <button class="contact-btn" id="contactBtn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3.5A11.8 11.8 0 0012 0C5.4 0 0 5.4 0 12c0 2.1.5 4.1 1.6 5.9L0 24l6.3-1.6A12 12 0 0012 24c6.6 0 12-5.4 12-12 0-3.2-1.3-6.2-3.5-8.5zM12 22c-1.9 0-3.7-.5-5.3-1.5l-.4-.2-3.8 1 1-3.7-.2-.4A9.9 9.9 0 012 12C2 6.5 6.5 2 12 2s10 4.5 10 10-4.5 10-10 10z"></path></svg>
+            تواصل عبر واتساب
+          </button>
+          <button class="action-btn" id="detailFavBtn" onclick="toggleFavoriteCurrent()" title="إضافة للمفضلة">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.35-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.6.7 4.5 2.2C10.9 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.65 12 21 12 21z"></path></svg>
+          </button>
+          <button class="action-btn delete" id="detailDeleteBtn" onclick="deleteCurrentItem()" title="حذف الإعلان" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
         </div>
+      </div>
     </div>
+  </div>
+</main>
 
-    <!-- Phone a Friend Modal -->
-    <div id="phone-modal" class="modal">
-        <div class="modal-content">
-            <h2>📞 اتصل بصديق</h2>
-            <div class="phone-animation" id="phone-animation">
-                <div class="phone-ring">📱</div>
-            </div>
-            <p class="friend-response" id="friend-response"></p>
-            <button class="btn-primary" onclick="closeModal('phone-modal')">شكراً</button>
+<main id="pagePost" class="hidden">
+  <div class="post-wrap">
+    <div class="post-card">
+      <h2>أضف سلعتك للبيع</h2>
+      <div class="upload-box" id="uploadBox" onclick="document.getElementById('imageInput').click()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <span style="font-size:14px;font-weight:600;">اضغط لإضافة صورة السلعة</span>
+      </div>
+      <input type="file" id="imageInput" accept="image/*" style="display:none;">
+
+      <div class="field">
+        <label for="itemName">اسم السلعة *</label>
+        <input type="text" id="itemName" placeholder="مثال: دراجة هوائية شبه جديدة">
+      </div>
+      <div class="error-text" id="nameErr">يرجى كتابة اسم السلعة.</div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="itemPrice">السعر (دج)</label>
+          <input type="text" id="itemPrice" placeholder="5000" inputmode="numeric">
         </div>
-    </div>
-
-    <!-- Result Screen -->
-    <div id="result-screen" class="screen">
-        <div class="result-content">
-            <div class="result-icon" id="result-icon"></div>
-            <h1 class="result-title" id="result-title"></h1>
-            <p class="result-subtitle" id="result-subtitle"></p>
-            <div class="result-prize" id="result-prize"></div>
-            <button class="btn-primary pulse-btn" onclick="restartGame()">العب مرة أخرى</button>
+        <div class="field">
+          <label for="itemLoc">المنطقة *</label>
+          <input type="text" id="itemLoc" placeholder="مثال: تلمسان، سيدي بلعباس...">
         </div>
-        <div id="confetti-container"></div>
-    </div>
+      </div>
+      <div class="error-text" id="priceErr">السعر يجب أن يكون أرقامًا فقط.</div>
 
-    <script src="script.js"></script>
+      <div class="field">
+        <label for="itemPhone">رقم الهاتف (واتساب) *</label>
+        <input type="tel" id="itemPhone" placeholder="0555 12 34 56" dir="ltr" style="text-align:right;">
+      </div>
+      <div class="error-text" id="phoneErr">يرجى إدخال رقم جزائري صحيح (10 أرقام يبدأ بـ 05, 06, أو 07).</div>
+
+      <div class="field">
+        <label for="itemCat">الفئة *</label>
+        <select id="itemCat">
+          <option value="إلكترونيات">إلكترونيات</option>
+          <option value="أثاث">أثاث</option>
+          <option value="ملابس">ملابس</option>
+          <option value="صناعة يدوية">صناعة يدوية</option>
+          <option value="أخرى">أخرى</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="itemDesc">وصف قصير</label>
+        <textarea id="itemDesc" placeholder="حالة السلعة، سبب البيع، أي عيوب..."></textarea>
+      </div>
+
+      <button class="submit-btn" id="submitBtn" onclick="submitItem()">نشر الإعلان الآن</button>
+      <div class="success-msg" id="successMsg">✓ تم نشر السلعة بنجاح! جاري تحويلك...</div>
+    </div>
+  </div>
+</main>
+
+<!-- Auth Modal (Mandatory) -->
+<div class="modal-overlay open" id="authModal">
+  <div class="modal-box">
+    <h3>تسجيل الدخول مطلوب</h3>
+    <p>لضمان أمان السوق، يجب تسجيل الدخول ببريد إلكتروني حقيقي لإضافة أو إدارة الإعلانات.</p>
+    <input type="email" id="authEmail" placeholder="your@email.com">
+    <button class="modal-btn primary" id="sendLinkBtn" onclick="sendEmailLink()">أرسل رابط الدخول السحري</button>
+    <div class="modal-msg" id="authMsg"></div>
+  </div>
+</div>
+
+<footer>
+  <div>سوقنا © 2026 — سوق محلي يربطك بأهل منطقتك بأمان</div>
+</footer>
+
+<!-- Scripts -->
+<script type="module" src="firebase.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
