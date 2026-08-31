@@ -24,7 +24,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+// إعدادات رابط الإيميل - مهم جداً!
 const actionCodeSettings = {
+  // يجب أن يكون URL كامل ومحدد
   url: window.location.origin + window.location.pathname,
   handleCodeInApp: true
 };
@@ -33,34 +35,54 @@ let currentUser = null;
 let confirmationResult = null;
 let recaptchaVerifier = null;
 
-// === Mandatory Auth Check ===
-onAuthStateChanged(auth, (user) => {
+// === معالجة حالة المستخدم ===
+onAuthStateChanged(auth, async (user) => {
+  console.log('Auth state changed:', user ? user.uid : 'null');
   currentUser = user;
   updateAuthUI(user);
   
   if (!user) {
-    if (typeof window.openAuthModal === 'function') window.openAuthModal();
-    document.body.style.overflow = 'hidden';
+    // التحقق من وجود رابط إيميل في URL
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      console.log('Email link detected in URL');
+      let email = window.localStorage.getItem('emailForSignIn');
+      
+      if (!email) {
+        email = window.prompt('يرجى إدخال البريد الإلكتروني الذي أرسلت إليه الرابط:');
+      }
+      
+      if (email) {
+        try {
+          console.log('Signing in with email link...');
+          await signInWithEmailLink(auth, email, window.location.href);
+          window.localStorage.removeItem('emailForSignIn');
+          
+          // إزالة معاملات الرابط من URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+          console.log('Email sign-in successful');
+        } catch (err) {
+          console.error('Email link sign-in error:', err);
+          alert('خطأ في تسجيل الدخول عبر الرابط: ' + err.message);
+          // فتح نافذة الدخول يدوياً
+          if (typeof window.openAuthModal === 'function') window.openAuthModal();
+        }
+      } else {
+        // المستخدم ألغى الإدخال
+        if (typeof window.openAuthModal === 'function') window.openAuthModal();
+      }
+    } else {
+      // لا يوجد مستخدم ولا رابط إيميل
+      if (typeof window.openAuthModal === 'function') window.openAuthModal();
+      document.body.style.overflow = 'hidden';
+    }
   } else {
+    // المستخدم مسجل دخوله
     document.body.style.overflow = '';
     if (typeof window.closeAuthModal === 'function') window.closeAuthModal();
     
+    // إذا كان هناك رابط إيميل في URL، قم بإزالته
     if (isSignInWithEmailLink(auth, window.location.href)) {
-      let email = window.localStorage.getItem('emailForSignIn');
-      if (!email) {
-        email = window.prompt('يرجى تأكيد بريدك الإلكتروني لإتمام الدخول:');
-      }
-      if (email) {
-        signInWithEmailLink(auth, email, window.location.href)
-          .then(() => { 
-            window.localStorage.removeItem('emailForSignIn'); 
-            window.history.replaceState({}, document.title, window.location.pathname);
-          })
-          .catch((err) => { 
-            console.error('Email link error:', err);
-            alert('خطأ في تأكيد البريد: ' + err.message); 
-          });
-      }
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }
 });
@@ -68,6 +90,7 @@ onAuthStateChanged(auth, (user) => {
 function updateAuthUI(user) {
   const statusEl = document.getElementById('authStatus');
   const btnEl = document.getElementById('authBtn');
+  
   if (!user) {
     statusEl.textContent = 'غير مسجل';
     btnEl.style.display = 'inline-block';
@@ -100,9 +123,9 @@ window.initRecaptcha = function() {
         msg.textContent = 'انتهت صلاحية التحقق، حاول مرة أخرى.';
       }
     });
-    console.log('reCAPTCHA initialized successfully');
+    console.log('reCAPTCHA initialized');
   } catch (err) {
-    console.error('reCAPTCHA initialization error:', err);
+    console.error('reCAPTCHA init error:', err);
   }
 };
 
@@ -127,7 +150,7 @@ window.sendPhoneCode = async function() {
     fullPhone = countryCode + phoneDigits;
   }
   
-  console.log('Full phone number:', fullPhone);
+  console.log('Full phone:', fullPhone);
   
   btn.disabled = true;
   btn.innerHTML = '<span class="loading-spinner"></span> جاري الإرسال...';
@@ -160,9 +183,9 @@ window.sendPhoneCode = async function() {
     } else if (err.code === 'auth/missing-app-credentials') {
       msgEl.textContent = 'خطأ في التحقق. تأكد من إعدادات Firebase.';
     } else if (err.code === 'auth/quota-exceeded') {
-      msgEl.textContent = 'تم تجاوز الحصة المجانية. تأكد من تفعيل خطة Blaze.';
+      msgEl.textContent = 'تم تجاوز الحصة المجانية.';
     } else if (err.code === 'auth/admin-restricted-operation') {
-      msgEl.textContent = 'هذه العملية مقيدة. تأكد من تفعيل Phone Auth في Firebase.';
+      msgEl.textContent = 'هذه العملية مقيدة. فعّل Phone Auth في Firebase.';
     } else {
       msgEl.textContent = 'خطأ: ' + err.message;
     }
@@ -204,7 +227,7 @@ window.verifyPhoneCode = async function() {
     console.error('Verify code error:', err);
     msgEl.className = 'modal-msg err';
     if (err.code === 'auth/invalid-verification-code') {
-      msgEl.textContent = 'الرمز الذي أدخلته غير صحيح.';
+      msgEl.textContent = 'الرمز غير صحيح.';
     } else {
       msgEl.textContent = 'خطأ: ' + err.message;
     }
@@ -230,6 +253,7 @@ window.sendEmailLink = async function() {
   const btn = document.getElementById('sendLinkBtn');
   
   console.log('Sending email link to:', email);
+  console.log('Action code settings:', actionCodeSettings);
   
   if (!email || !email.includes('@')) {
     msgEl.className = 'modal-msg err';
@@ -243,8 +267,9 @@ window.sendEmailLink = async function() {
   try {
     await sendSignInLinkToEmail(auth, email, actionCodeSettings);
     window.localStorage.setItem('emailForSignIn', email);
+    
     msgEl.className = 'modal-msg ok';
-    msgEl.textContent = '✓ تم الإرسال! افتح بريدك واضغط على الرابط.';
+    msgEl.textContent = '✓ تم الإرسال! افتح بريدك واضغط على الرابط للدخول.';
     console.log('Email link sent successfully');
   } catch (err) {
     console.error('Email link error:', err);
@@ -253,7 +278,9 @@ window.sendEmailLink = async function() {
     if (err.code === 'auth/invalid-email') {
       msgEl.textContent = 'البريد الإلكتروني غير صالح.';
     } else if (err.code === 'auth/unauthorized-continue-uri') {
-      msgEl.textContent = 'الدومين غير مصرح به. أضفه في Firebase Console.';
+      msgEl.textContent = 'الدومين غير مصرح به. أضفه في Firebase Console > Authentication > Settings > Authorized domains';
+    } else if (err.code === 'auth/missing-continue-uri') {
+      msgEl.textContent = 'خطأ في إعدادات الرابط. تأكد من actionCodeSettings.';
     } else {
       msgEl.textContent = 'خطأ: ' + err.message;
     }
