@@ -210,7 +210,29 @@
 
       <div class="field">
         <label for="itemName">اسم السلعة</label>
-        <input type="text" id="itemName" placeholder="مثال: دراجة هوائية شبه جديدة">
+        <input type="text" id="itemName" list="itemNameSuggestions" placeholder="اكتب اسم السلعة أو اختر من الاقتراحات">
+        <datalist id="itemNameSuggestions">
+          <option value="هاتف محمول">
+          <option value="حاسوب محمول (لابتوب)">
+          <option value="تلفاز">
+          <option value="دراجة هوائية">
+          <option value="دراجة نارية">
+          <option value="سيارة">
+          <option value="أثاث غرفة نوم">
+          <option value="أثاث صالون">
+          <option value="ملابس رجالية">
+          <option value="ملابس نسائية">
+          <option value="أحذية">
+          <option value="كتب">
+          <option value="أدوات مطبخ">
+          <option value="ثلاجة">
+          <option value="غسالة">
+          <option value="مكيف هواء">
+          <option value="آلة تصوير">
+          <option value="سماعات">
+          <option value="ساعة يد">
+          <option value="أدوات رياضية">
+        </datalist>
       </div>
       <div class="error-text" id="nameErr">اكتب اسم السلعة أولا.</div>
 
@@ -640,7 +662,7 @@
       }
     }
 
-    const { data: inserted, error } = await supabase.from('items').insert({
+    const basePayload = {
       name: name,
       price: parseInt(price, 10),
       location: loc,
@@ -651,13 +673,27 @@
       seller_name: currentUser.user_metadata?.full_name || null,
       seller_email: currentUser.email,
       seller_whatsapp: waNormalized
-    }).select().single();
+    };
+
+    let { data: inserted, error } = await supabase.from('items').insert(basePayload).select().single();
+
+    // إذا كان عمود seller_whatsapp غير موجود بعد في قاعدة البيانات، نعيد المحاولة بدونه
+    if(error && /seller_whatsapp/i.test(error.message || '')){
+      const fallbackPayload = Object.assign({}, basePayload);
+      delete fallbackPayload.seller_whatsapp;
+      const retry = await supabase.from('items').insert(fallbackPayload).select().single();
+      inserted = retry.data;
+      error = retry.error;
+      if(!error){
+        console.warn('تم النشر بدون رقم واتساب لأن عمود seller_whatsapp غير موجود في جدول items. أضفه في Supabase لتفعيل الميزة كاملة.');
+      }
+    }
 
     submitBtn.disabled = false;
     submitBtn.textContent = 'انشر السلعة';
 
     if(error){
-      alert('صار خطأ أثناء النشر، حاول مرة أخرى.');
+      alert('صار خطأ أثناء النشر: ' + (error.message || 'سبب غير معروف') + '\nراجع الطرفية (Console) لمزيد من التفاصيل.');
       console.error(error);
       return;
     }
