@@ -44,6 +44,7 @@
 
   .controls-row{max-width:1000px;margin:14px auto 0;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
   .sort-select{height:38px;border-radius:8px;border:1px solid var(--line);background:var(--white);padding:0 10px;font-size:13px;color:var(--ink-soft);}
+  .toggles-group{display:flex;gap:8px;flex-wrap:wrap;}
   .fav-toggle{height:38px;border-radius:8px;border:1px solid var(--line);background:var(--white);padding:0 14px;font-size:13px;color:var(--ink-soft);display:flex;align-items:center;gap:6px;}
   .fav-toggle.active{background:var(--rust);color:var(--white);border-color:var(--rust);}
   .fav-toggle svg{width:14px;height:14px;}
@@ -60,6 +61,8 @@
   .fav-btn{position:absolute;top:8px;left:8px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;color:var(--ink-muted);}
   .fav-btn.active{color:var(--rust);}
   .fav-btn svg{width:16px;height:16px;}
+  .delete-btn{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;color:#a32d2d;}
+  .delete-btn svg{width:14px;height:14px;}
   .empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--ink-muted);font-size:14px;}
   .empty-state svg{width:40px;height:40px;margin-bottom:12px;opacity:.5;}
 
@@ -102,6 +105,7 @@
   .contact-btn{flex:1;height:46px;background:#25D366;color:#fff;border-radius:8px;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;}
   .fav-btn-large{width:46px;height:46px;border-radius:8px;border:1px solid var(--line);background:var(--white);display:flex;align-items:center;justify-content:center;color:var(--ink-muted);}
   .fav-btn-large.active{color:var(--rust);border-color:var(--rust);}
+  .delete-detail-btn{width:100%;height:44px;background:#a32d2d;color:#fff;border-radius:8px;font-weight:700;font-size:14px;margin-top:12px;}
 
   .hidden{display:none !important;}
   footer{text-align:center;padding:24px;color:var(--ink-muted);font-size:13px;border-top:1px solid var(--line);}
@@ -139,10 +143,16 @@
       <option value="lowest">الأقل سعرًا</option>
       <option value="highest">الأعلى سعرًا</option>
     </select>
-    <button class="fav-toggle" id="favToggle" onclick="toggleFavView()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.35-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.6.7 4.5 2.2C10.9 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.65 12 21 12 21z"></path></svg>
-      المفضلة
-    </button>
+    <div class="toggles-group">
+      <button class="fav-toggle" id="favToggle" onclick="toggleFavView()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.35-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.6.7 4.5 2.2C10.9 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.65 12 21 12 21z"></path></svg>
+        المفضلة
+      </button>
+      <button class="fav-toggle" id="mineToggle" onclick="toggleMineView()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        سلعي
+      </button>
+    </div>
   </div>
 
   <div class="loading-row" id="loadingRow">جارِ تحميل السلع...</div>
@@ -166,14 +176,12 @@
         </div>
         <div class="detail-desc" id="detailDesc"></div>
         <div class="detail-actions">
-          <a class="contact-btn" id="contactBtn" target="_blank" rel="noopener">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3.5A11.8 11.8 0 0012 0C5.4 0 0 5.4 0 12c0 2.1.5 4.1 1.6 5.9L0 24l6.3-1.6A12 12 0 0012 24c6.6 0 12-5.4 12-12 0-3.2-1.3-6.2-3.5-8.5zM12 22c-1.9 0-3.7-.5-5.3-1.5l-.4-.2-3.8 1 1-3.7-.2-.4A9.9 9.9 0 012 12C2 6.5 6.5 2 12 2s10 4.5 10 10-4.5 10-10 10z"></path></svg>
-            تواصل عبر البريد
-          </a>
+          <a class="contact-btn" id="contactBtn" target="_blank" rel="noopener"></a>
           <button class="fav-btn-large" id="detailFavBtn" onclick="toggleFavoriteCurrent()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.35-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.6.7 4.5 2.2C10.9 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.65 12 21 12 21z"></path></svg>
           </button>
         </div>
+        <button class="delete-detail-btn hidden" id="deleteDetailBtn" onclick="deleteCurrentItem()">حذف السلعة</button>
       </div>
     </div>
   </div>
@@ -212,11 +220,20 @@
           <input type="text" id="itemPrice" placeholder="5000" inputmode="numeric">
         </div>
         <div class="field">
-          <label for="itemLoc">المنطقة</label>
-          <input type="text" id="itemLoc" placeholder="تلمسان">
+          <label for="itemLoc">الولاية</label>
+          <select id="itemLoc">
+            <option value="" disabled selected>اختر ولايتك</option>
+          </select>
         </div>
       </div>
       <div class="error-text" id="priceErr">اكتب سعرًا صحيحًا بالأرقام فقط.</div>
+      <div class="error-text" id="locErr">اختر ولايتك من القائمة.</div>
+
+      <div class="field">
+        <label for="itemWhatsapp">رقم واتساب (اختياري)</label>
+        <input type="text" id="itemWhatsapp" placeholder="0555 XX XX XX" inputmode="numeric">
+      </div>
+      <div class="error-text" id="waErr">اكتب رقم واتساب صحيح (يبدأ بـ 05 أو 06 أو 07 ويتكوّن من 10 أرقام).</div>
 
       <div class="field">
         <label for="itemCat">الفئة</label>
@@ -254,12 +271,38 @@
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   window.supabase = supabase;
 
+  // ===== قائمة الولايات (01 - أدرار إلى 58 - المنيعة) =====
+  const wilayas = [
+    '01 - أدرار','02 - الشلف','03 - الأغواط','04 - أم البواقي','05 - باتنة',
+    '06 - بجاية','07 - بسكرة','08 - بشار','09 - البليدة','10 - البويرة',
+    '11 - تمنراست','12 - تبسة','13 - تلمسان','14 - تيارت','15 - تيزي وزو',
+    '16 - الجزائر','17 - الجلفة','18 - جيجل','19 - سطيف','20 - سعيدة',
+    '21 - سكيكدة','22 - سيدي بلعباس','23 - عنابة','24 - قالمة','25 - قسنطينة',
+    '26 - المدية','27 - مستغانم','28 - المسيلة','29 - معسكر','30 - ورقلة',
+    '31 - وهران','32 - البيض','33 - إليزي','34 - برج بوعريريج','35 - بومرداس',
+    '36 - الطارف','37 - تندوف','38 - تيسمسيلت','39 - الوادي','40 - خنشلة',
+    '41 - سوق أهراس','42 - تيبازة','43 - ميلة','44 - عين الدفلى','45 - النعامة',
+    '46 - عين تموشنت','47 - غرداية','48 - غليزان','49 - تيميمون','50 - برج باجي مختار',
+    '51 - أولاد جلال','52 - بني عباس','53 - عين صالح','54 - عين قزام','55 - تقرت',
+    '56 - جانت','57 - المغير','58 - المنيعة'
+  ];
+
+  function populateWilayas(){
+    const sel = document.getElementById('itemLoc');
+    wilayas.forEach(function(w){
+      const opt = document.createElement('option');
+      opt.value = w;
+      opt.textContent = w;
+      sel.appendChild(opt);
+    });
+  }
+
   let currentUser = null;
   let items = [];
   const categories = ['الكل','إلكترونيات','أثاث','ملابس','صناعة يدوية','أخرى'];
   let activeCategory = 'الكل';
-  let favorites = new Set();
   let showFavoritesOnly = false;
+  let showMineOnly = false;
   let currentDetailId = null;
   let pendingImageFile = null;
 
@@ -267,6 +310,31 @@
     var div = document.createElement('div');
     div.textContent = str == null ? '' : String(str);
     return div.innerHTML;
+  }
+
+  // ===== المفضلة — تُحفظ في localStorage عشان تبقى بعد إغلاق الصفحة =====
+  function loadFavorites(){
+    try{
+      const raw = localStorage.getItem('souqna_favorites');
+      return new Set(raw ? JSON.parse(raw) : []);
+    }catch(e){
+      return new Set();
+    }
+  }
+  function saveFavorites(){
+    try{
+      localStorage.setItem('souqna_favorites', JSON.stringify(Array.from(favorites)));
+    }catch(e){ /* تجاهل إذا التخزين غير متاح */ }
+  }
+  let favorites = loadFavorites();
+
+  // ===== تحقق وتنسيق رقم واتساب الجزائري =====
+  // يقبل 05/06/07 + 8 أرقام (10 أرقام كاملة) ويحوّله لصيغة دولية 213...
+  function normalizeWhatsapp(v){
+    const digits = v.replace(/\D/g, '');
+    if(!digits) return null;
+    if(!/^0[567][0-9]{8}$/.test(digits)) return 'invalid';
+    return '213' + digits.substring(1);
   }
 
   // ===== تسجيل الدخول بجوجل =====
@@ -306,12 +374,16 @@
     } else {
       loginCard.classList.remove('hidden');
       postCard.classList.add('hidden');
+      showMineOnly = false;
+      const mineBtn = document.getElementById('mineToggle');
+      if(mineBtn) mineBtn.classList.remove('active');
     }
+    renderGrid();
   }
 
   supabase.auth.onAuthStateChange(() => { refreshAuthUI(); });
 
-  // ===== تحميل السلع من قاعدة البيانات =====
+  // ===== تحميل السلع من قاعدة البيانات (مرة عند بدء التشغيل فقط) =====
   async function loadItems(){
     document.getElementById('loadingRow').classList.remove('hidden');
     const { data, error } = await supabase
@@ -328,10 +400,20 @@
     renderGrid();
   }
 
-  // إعادة تحميل تلقائي عند إضافة سلعة جديدة من أي مستخدم (لحظي)
+  // تحديث لحظي — نضيف/نحذف من المصفوفة مباشرة بدل إعادة تحميل كل السلع من جديد
   supabase
     .channel('items-changes')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'items' }, () => { loadItems(); })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'items' }, function(payload){
+      if(!items.find(function(it){ return it.id === payload.new.id; })){
+        items.unshift(payload.new);
+        renderGrid();
+      }
+    })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'items' }, function(payload){
+      items = items.filter(function(it){ return it.id !== payload.old.id; });
+      renderGrid();
+      if(currentDetailId === payload.old.id){ showPage('home'); }
+    })
     .subscribe();
 
   window.toggleFavView = function(){
@@ -340,10 +422,39 @@
     renderGrid();
   };
 
+  window.toggleMineView = function(){
+    if(!currentUser){ alert('سجّل دخولك أول عشان تشوف سلعك.'); return; }
+    showMineOnly = !showMineOnly;
+    document.getElementById('mineToggle').classList.toggle('active', showMineOnly);
+    renderGrid();
+  };
+
   window.toggleFavorite = function(id, btnEl){
     if(favorites.has(id)) favorites.delete(id); else favorites.add(id);
+    saveFavorites();
     if(btnEl) btnEl.classList.toggle('active', favorites.has(id));
     if(showFavoritesOnly) renderGrid();
+  };
+
+  // ===== حذف سلعة (يخص صاحبها فقط) =====
+  window.deleteItem = async function(id, evt){
+    if(evt) evt.stopPropagation();
+    if(!currentUser) return;
+    const ok = confirm('متأكد أنك تريد حذف هذه السلعة؟');
+    if(!ok) return;
+    const { error } = await supabase.from('items').delete().eq('id', id).eq('user_id', currentUser.id);
+    if(error){
+      alert('تعذر حذف السلعة، حاول مرة أخرى.');
+      console.error(error);
+      return;
+    }
+    items = items.filter(function(it){ return it.id !== id; });
+    renderGrid();
+    if(currentDetailId === id){ showPage('home'); }
+  };
+
+  window.deleteCurrentItem = function(){
+    if(currentDetailId != null) deleteItem(currentDetailId);
   };
 
   function renderChips(){
@@ -367,16 +478,18 @@
       const haystack = (it.name + ' ' + (it.description || '')).toLowerCase();
       const matchQuery = !query || haystack.indexOf(query) !== -1;
       const matchFav = !showFavoritesOnly || favorites.has(it.id);
-      return matchCat && matchQuery && matchFav;
+      const matchMine = !showMineOnly || (currentUser && it.user_id === currentUser.id);
+      return matchCat && matchQuery && matchFav && matchMine;
     });
     if(sortBy === 'lowest') filtered = filtered.slice().sort((a,b) => a.price - b.price);
     else if(sortBy === 'highest') filtered = filtered.slice().sort((a,b) => b.price - a.price);
 
     grid.innerHTML = '';
     if(filtered.length === 0){
-      const msg = items.length === 0
-        ? 'ما فيه سلع منشورة بعد. كن أول من ينشر!'
-        : (showFavoritesOnly ? 'ما عندكش سلع بالمفضلة بعد.' : 'ما لقيناش سلع تطابق بحثك.');
+      let msg = 'ما لقيناش سلع تطابق بحثك.';
+      if(items.length === 0) msg = 'ما فيه سلع منشورة بعد. كن أول من ينشر!';
+      else if(showMineOnly) msg = 'ما نشرتش أي سلعة بعد.';
+      else if(showFavoritesOnly) msg = 'ما عندكش سلع بالمفضلة بعد.';
       grid.innerHTML = '<div class="empty-state">' + msg + '</div>';
       return;
     }
@@ -384,12 +497,14 @@
       const card = document.createElement('div');
       card.className = 'card';
       const isFav = favorites.has(it.id);
+      const isMine = currentUser && it.user_id === currentUser.id;
       const imgContent = it.image_url
         ? '<img src="' + it.image_url + '" alt="' + escapeHtml(it.name) + '">'
         : '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="8.5" cy="10.5" r="1.5"></circle><path d="M21 15l-5-5-9 9"></path></svg>';
       card.innerHTML =
         '<div class="card-img">' +
         '<button class="fav-btn' + (isFav ? ' active' : '') + '" aria-label="أضف للمفضلة"><svg viewBox="0 0 24 24" fill="' + (isFav ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.35-9.5-8.5C.7 9 2 5.5 5.5 5c2-.3 3.6.7 4.5 2.2C10.9 5.7 12.5 4.7 14.5 5c3.5.5 4.8 4 3 7.5C19 16.65 12 21 12 21z"></path></svg></button>' +
+        (isMine ? '<button class="delete-btn" aria-label="حذف"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"></path><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"></path></svg></button>' : '') +
         imgContent +
         '</div>' +
         '<div class="card-body">' +
@@ -401,6 +516,10 @@
         e.stopPropagation();
         toggleFavorite(it.id, e.currentTarget);
       });
+      const delBtn = card.querySelector('.delete-btn');
+      if(delBtn){
+        delBtn.addEventListener('click', function(e){ deleteItem(it.id, e); });
+      }
       card.querySelector('.card-body').addEventListener('click', function(){ openDetail(it.id); });
       grid.appendChild(card);
     });
@@ -419,9 +538,26 @@
     document.getElementById('detailLoc').textContent = '📍 ' + it.location;
     document.getElementById('detailCat').textContent = it.category;
     document.getElementById('detailDesc').textContent = it.description || 'بدون وصف إضافي.';
+
+    // زر التواصل: واتساب أولاً إذا متوفر، وإلا البريد
     const contactBtn = document.getElementById('contactBtn');
-    contactBtn.href = it.seller_email ? ('mailto:' + it.seller_email + '?subject=' + encodeURIComponent('استفسار عن: ' + it.name)) : '#';
+    const waIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3.5A11.8 11.8 0 0012 0C5.4 0 0 5.4 0 12c0 2.1.5 4.1 1.6 5.9L0 24l6.3-1.6A12 12 0 0012 24c6.6 0 12-5.4 12-12 0-3.2-1.3-6.2-3.5-8.5zM12 22c-1.9 0-3.7-.5-5.3-1.5l-.4-.2-3.8 1 1-3.7-.2-.4A9.9 9.9 0 012 12C2 6.5 6.5 2 12 2s10 4.5 10 10-4.5 10-10 10z"></path></svg>';
+    if(it.seller_whatsapp){
+      contactBtn.href = 'https://wa.me/' + it.seller_whatsapp + '?text=' + encodeURIComponent('مرحبا، أنا مهتم بسلعتك: ' + it.name);
+      contactBtn.style.background = '#25D366';
+      contactBtn.innerHTML = waIcon + ' تواصل عبر واتساب';
+    } else if(it.seller_email){
+      contactBtn.href = 'mailto:' + it.seller_email + '?subject=' + encodeURIComponent('استفسار عن: ' + it.name);
+      contactBtn.style.background = 'var(--teal)';
+      contactBtn.innerHTML = waIcon + ' تواصل عبر البريد';
+    } else {
+      contactBtn.href = '#';
+      contactBtn.style.background = 'var(--ink-muted)';
+      contactBtn.innerHTML = 'لا توجد وسيلة تواصل متاحة';
+    }
+
     document.getElementById('detailFavBtn').classList.toggle('active', favorites.has(id));
+    document.getElementById('deleteDetailBtn').classList.toggle('hidden', !(currentUser && it.user_id === currentUser.id));
     showPage('detail');
   };
 
@@ -435,6 +571,12 @@
   document.getElementById('imageInput').addEventListener('change', function(e){
     const file = e.target.files[0];
     if(!file) return;
+    const maxSize = 5 * 1024 * 1024; // 5 ميغابايت
+    if(file.size > maxSize){
+      alert('حجم الصورة كبير جدًا، اختر صورة أقل من 5 ميغابايت.');
+      e.target.value = '';
+      return;
+    }
     pendingImageFile = file;
     const reader = new FileReader();
     reader.onload = function(ev){
@@ -457,16 +599,31 @@
     if(!currentUser){ alert('سجّل دخولك أول.'); return; }
     const name = document.getElementById('itemName').value.trim();
     const price = document.getElementById('itemPrice').value.trim();
-    const loc = document.getElementById('itemLoc').value.trim();
+    const loc = document.getElementById('itemLoc').value;
     const cat = document.getElementById('itemCat').value;
     const desc = document.getElementById('itemDesc').value.trim();
+    const waRaw = document.getElementById('itemWhatsapp').value.trim();
+
     const nameErr = document.getElementById('nameErr');
     const priceErr = document.getElementById('priceErr');
+    const locErr = document.getElementById('locErr');
+    const waErr = document.getElementById('waErr');
 
     let hasError = false;
     if(!name){ nameErr.style.display = 'block'; hasError = true; } else { nameErr.style.display = 'none'; }
     const priceValid = /^[0-9]+$/.test(price);
     if(!priceValid){ priceErr.style.display = 'block'; hasError = true; } else { priceErr.style.display = 'none'; }
+    if(!loc){ locErr.style.display = 'block'; hasError = true; } else { locErr.style.display = 'none'; }
+
+    let waNormalized = null;
+    if(waRaw){
+      waNormalized = normalizeWhatsapp(waRaw);
+      if(waNormalized === 'invalid'){ waErr.style.display = 'block'; hasError = true; }
+      else { waErr.style.display = 'none'; }
+    } else {
+      waErr.style.display = 'none';
+    }
+
     if(hasError) return;
 
     const submitBtn = document.getElementById('submitBtn');
@@ -483,17 +640,18 @@
       }
     }
 
-    const { error } = await supabase.from('items').insert({
+    const { data: inserted, error } = await supabase.from('items').insert({
       name: name,
       price: parseInt(price, 10),
-      location: loc || 'غير محدد',
+      location: loc,
       category: cat,
       description: desc,
       image_url: imageUrl,
       user_id: currentUser.id,
       seller_name: currentUser.user_metadata?.full_name || null,
-      seller_email: currentUser.email
-    });
+      seller_email: currentUser.email,
+      seller_whatsapp: waNormalized
+    }).select().single();
 
     submitBtn.disabled = false;
     submitBtn.textContent = 'انشر السلعة';
@@ -504,9 +662,14 @@
       return;
     }
 
+    if(inserted && !items.find(function(it){ return it.id === inserted.id; })){
+      items.unshift(inserted);
+    }
+
     document.getElementById('itemName').value = '';
     document.getElementById('itemPrice').value = '';
-    document.getElementById('itemLoc').value = '';
+    document.getElementById('itemLoc').selectedIndex = 0;
+    document.getElementById('itemWhatsapp').value = '';
     document.getElementById('itemDesc').value = '';
     resetUploadBox();
 
@@ -514,12 +677,14 @@
     setTimeout(function(){
       document.getElementById('successMsg').style.display = 'none';
       showPage('home');
-      loadItems();
+      renderGrid();
     }, 1000);
   };
 
   document.getElementById('itemName').addEventListener('input', function(){ document.getElementById('nameErr').style.display = 'none'; });
   document.getElementById('itemPrice').addEventListener('input', function(){ document.getElementById('priceErr').style.display = 'none'; });
+  document.getElementById('itemLoc').addEventListener('change', function(){ document.getElementById('locErr').style.display = 'none'; });
+  document.getElementById('itemWhatsapp').addEventListener('input', function(){ document.getElementById('waErr').style.display = 'none'; });
 
   window.showPage = function(page){
     document.getElementById('pageHome').classList.toggle('hidden', page !== 'home');
@@ -530,6 +695,7 @@
     window.scrollTo(0,0);
   };
 
+  populateWilayas();
   renderChips();
   refreshAuthUI();
   loadItems();
