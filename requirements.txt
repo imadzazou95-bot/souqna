@@ -1,0 +1,7 @@
+habibi-tts
+fastapi
+uvicorn[standard]
+huggingface_hub
+soundfile
+numpy
+pydantic

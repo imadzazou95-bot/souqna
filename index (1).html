@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>صوت دزاير - تحويل النص إلى صوت جزائري</title>
+<meta name="description" content="حوّل نصك بالدارجة الجزائرية إلى صوت بالذكاء الاصطناعي وحمّل الملف الصوتي.">
+<style>
+  :root{
+    --bg:#f6f5f1; --card:#ffffff; --ink:#1b1b1b; --muted:#6b6b66;
+    --green:#0a7a3e; --green-d:#075c2e; --red:#c0392b; --line:#e3e1d9;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#121413; --card:#1c1f1d; --ink:#f0efe9; --muted:#9a9a93; --line:#2c302d; --green:#2fb36a; --green-d:#249a58; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic",Arial,sans-serif;line-height:1.7}
+  header{padding:28px 16px 8px;text-align:center}
+  header h1{margin:0;font-size:1.9rem}
+  header h1 span{color:var(--green)}
+  header p{margin:6px 0 0;color:var(--muted)}
+  main{max-width:760px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+  label{display:block;font-weight:600;margin-bottom:6px}
+  textarea{width:100%;min-height:150px;padding:12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;font:inherit;font-size:1.1rem;resize:vertical}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+  .row > div{flex:1;min-width:200px}
+  select,input[type=text]{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;font:inherit}
+  select option{color:#1b1b1b}
+  input[type=range]{width:100%}
+  .counter{display:flex;justify-content:space-between;color:var(--muted);font-size:.9rem;margin-top:6px}
+  button{cursor:pointer;border:0;border-radius:10px;padding:12px 20px;font:inherit;font-weight:700}
+  .primary{background:var(--green);color:#fff;width:100%;margin-top:16px;font-size:1.1rem}
+  .primary:hover{background:var(--green-d)}
+  .primary:disabled{opacity:.6;cursor:wait}
+  .chip{background:transparent;border:1px solid var(--line);color:var(--ink);padding:6px 12px;font-weight:400;font-size:.9rem;margin:0 0 6px 6px}
+  .chip:hover{border-color:var(--green)}
+  .msg{margin-top:12px;color:var(--red);min-height:1.4em}
+  .hint{color:var(--muted);font-size:.9rem;margin:8px 0 0}
+  audio{width:100%;margin-top:14px}
+  .dl{display:inline-block;margin-top:10px;color:var(--green);font-weight:700}
+  .quota{color:var(--muted);font-size:.95rem}
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:10px}
+  .plan{border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+  .plan b{display:block;font-size:1.15rem}
+  .plan .price{color:var(--green);font-size:1.3rem;font-weight:800;display:block}
+  footer{text-align:center;color:var(--muted);font-size:.85rem;padding:20px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>صوت <span>دزاير</span></h1>
+  <p>اكتب بالدارجة واسمعها بصوت جزائري بالذكاء الاصطناعي</p>
+</header>
+
+<main>
+  <section class="card">
+    <label for="text">النص</label>
+    <textarea id="text" placeholder="اكتب هنا بالدارجة... مثال: واش راك خويا؟ لاباس عليك؟"></textarea>
+    <div class="counter"><span id="count">0</span><span id="limit"></span></div>
+    <p class="hint">اكتب بالحروف العربية فقط. الأرقام تُكتب بالحروف (مثال: خمسين) ولا تستعمل الحروف اللاتينية. التشكيل لا يلزم.</p>
+
+    <div style="margin-top:10px">
+      <button class="chip" data-s="واش راك خويا؟ لاباس عليك؟">تحية</button>
+      <button class="chip" data-s="صباح الخير، واش راك اليوم؟">صباح الخير</button>
+      <button class="chip" data-s="مرحبا بيكم في متجرنا، عندنا أحسن الأسعار والتوصيل لجميع الولايات.">إعلان متجر</button>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="voice">الصوت</label>
+        <select id="voice"></select>
+      </div>
+      <div>
+        <label for="speed">السرعة: <span id="speedVal">1.0</span>×</label>
+        <input type="range" id="speed" min="0.8" max="1.2" step="0.05" value="1">
+      </div>
+    </div>
+
+    <button class="primary" id="go">حوّل إلى صوت</button>
+    <div class="msg" id="msg" role="alert"></div>
+
+    <div id="result" class="hidden">
+      <audio id="player" controls></audio>
+      <a id="dl" class="dl" download="sawt-dzair.mp3">تحميل الملف الصوتي</a>
+    </div>
+  </section>
+
+  <section class="card">
+    <label for="code">عندك كود اشتراك؟</label>
+    <input type="text" id="code" placeholder="DZ-XXXXXXXXXX" dir="ltr" autocomplete="off">
+    <p class="quota" id="quota"></p>
+  </section>
+
+  <section class="card">
+    <label>الباقات</label>
+    <p class="quota">الحصة المجانية: جرّب الموقع كل يوم بدون تسجيل. للنصوص الأطول اشترِ كود رصيد.</p>
+    <div class="plans">
+      <div class="plan"><b>باقة صغيرة</b><span class="price">500 دج</span><span>20,000 حرف</span></div>
+      <div class="plan"><b>باقة متوسطة</b><span class="price">1500 دج</span><span>80,000 حرف</span></div>
+      <div class="plan"><b>باقة كبيرة</b><span class="price">4000 دج</span><span>250,000 حرف</span></div>
+    </div>
+    <p class="quota">للشراء تواصل معنا: <b>ضع هنا رقمك أو رابط حسابك</b>، وسنرسل لك الكود بعد الدفع.</p>
+  </section>
+</main>
+
+<footer>الأصوات مولّدة بالذكاء الاصطناعي. يُمنع استخدامها لانتحال شخصية أحد أو للتضليل أو الاحتيال.</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const text = $('text'), msg = $('msg'), go = $('go');
+let maxLen = 300;
+
+try { $('code').value = localStorage.getItem('dz_code') || ''; } catch {}
+
+function errText(d, fallback) {
+  if (d && typeof d.detail === 'string') return d.detail;
+  if (d && typeof d.error === 'string') return d.error;
+  return fallback;
+}
+
+async function loadVoices() {
+  try {
+    const r = await fetch('/api/voices');
+    const list = await r.json();
+    $('voice').innerHTML = '';
+    list.forEach((v) => {
+      const o = document.createElement('option');
+      o.value = v.id; o.textContent = v.name;
+      $('voice').appendChild(o);
+    });
+    if (!list.length) msg.textContent = 'الأصوات غير متوفرة حاليًا';
+  } catch {}
+}
+
+async function refreshQuota() {
+  const code = $('code').value.trim();
+  try {
+    const r = await fetch('/api/quota', { headers: code ? { 'x-access-code': code } : {} });
+    const d = await r.json();
+    if (!r.ok) { $('quota').textContent = errText(d, ''); return; }
+    maxLen = d.maxPerRequest;
+    $('limit').textContent = 'الحد الأقصى: ' + maxLen;
+    $('quota').textContent = (d.type === 'paid' ? 'رصيد الكود: ' : 'المتبقي من حصتك المجانية اليوم: ') +
+      d.remaining.toLocaleString('ar-DZ') + ' حرف';
+  } catch { $('quota').textContent = ''; }
+}
+
+text.addEventListener('input', () => { $('count').textContent = text.value.length; });
+$('speed').addEventListener('input', (e) => { $('speedVal').textContent = Number(e.target.value).toFixed(2).replace(/0$/, ''); });
+$('code').addEventListener('change', () => {
+  try { localStorage.setItem('dz_code', $('code').value.trim()); } catch {}
+  refreshQuota();
+});
+document.querySelectorAll('.chip').forEach((b) =>
+  b.addEventListener('click', () => { text.value = b.dataset.s; text.dispatchEvent(new Event('input')); }));
+
+go.addEventListener('click', async () => {
+  msg.textContent = '';
+  const t = text.value.trim();
+  if (!t) { msg.textContent = 'اكتب نصًا أولًا'; return; }
+  if (t.length > maxLen) { msg.textContent = 'النص أطول من الحد المسموح (' + maxLen + ')'; return; }
+  go.disabled = true; go.textContent = 'جاري التوليد... قد يستغرق بضع ثوانٍ';
+  try {
+    const code = $('code').value.trim();
+    const r = await fetch('/api/tts', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, code ? { 'x-access-code': code } : {}),
+      body: JSON.stringify({ text: t, voice: $('voice').value, speed: Number($('speed').value) }),
+    });
+    if (!r.ok) {
+      let d = null;
+      try { d = await r.json(); } catch {}
+      msg.textContent = errText(d, 'حدث خطأ');
+      return;
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    $('player').src = url;
+    $('dl').href = url;
+    $('dl').download = 'sawt-dzair.' + (blob.type.includes('mpeg') ? 'mp3' : 'wav');
+    $('result').classList.remove('hidden');
+    $('player').play().catch(() => {});
+    refreshQuota();
+  } catch {
+    msg.textContent = 'تعذر الاتصال بالخادم';
+  } finally {
+    go.disabled = false; go.textContent = 'حوّل إلى صوت';
+  }
+});
+
+loadVoices();
+refreshQuota();
+</script>
+</body>
+</html>
